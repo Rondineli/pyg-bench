@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>Test Results</title>
+        <style type="text/css">
+	        #container {
+				min-width: 1500px;
+				max-width: 1500px;
+				height: 600px;
+				margin: 0 auto
+			}
+        </style>
+        <script src="//code.highcharts.com/highcharts.js"></script>
+		<script src="//code.highcharts.com/modules/series-label.js"></script>
+		<script src="//code.highcharts.com/modules/exporting.js"></script>
+		<script src="//code.highcharts.com/modules/export-data.js"></script>
+
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+		<script>
+		window.jQuery || document.write('<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"><\/script>;')
+		</script>
+
+    </head>
+    <body>
+    		<h2>{{ title }}</h2>
+        	<div id="container">
+        		<div id="container1"></div>
+        		<div id="container2"></div>
+        		<div id="container3"></div>
+        	</div>
+        <script type="text/javascript">
+        		var chart_2 = Highcharts.chart('container2', {
+				    chart: {
+				        type: 'column'
+				    },
+				    title: {
+				        text: 'Database Average Response Time'
+				    },
+				    xAxis: {
+				        type: 'category'
+				    },
+				    yAxis: {
+				        title: {
+				            text: 'Average Response Time Total'
+				        }
+
+				    },
+				    plotOptions: {
+				        series: {
+				            borderWidth: 0,
+				            dataLabels: {
+				                enabled: true,
+				                format: '{point.y:.1f}sec'
+				            }
+				        }
+				    },
+ 					series: []
+   				});
+
+
+        		var chart_3 = Highcharts.chart('container3', {
+				    chart: {
+				        type: 'column'
+				    },
+				    title: {
+				        text: 'Total query executed in {{time_execution_in_sec}} seconds'
+				    },
+				    xAxis: {
+				        type: 'category'
+				    },
+				    yAxis: {
+				        title: {
+				            text: 'Total query executed'
+				        }
+
+				    },
+				    plotOptions: {
+				        series: {
+				            borderWidth: 0,
+				            dataLabels: {
+				                enabled: true,
+				                format: '{point.y:.1f}'
+				            }
+				        }
+				    },
+ 					series: []
+   				});
+
+
+				var chart_1 = Highcharts.chart('container1', {
+
+				    title: {
+				        text: 'Database Response Time per query'
+				    },
+
+					  xAxis: {
+				                type: 'datetime'
+				            },
+				    yAxis: {
+				        title: {
+				            text: 'Response Time (sec)'
+				        }
+				    },
+				   
+				    plotOptions: {
+				        series: {
+				        turboThreshold: 100000
+				        }
+				    },
+
+				    series: [],
+
+				    responsive: {
+				        rules: [{
+				            condition: {
+				                maxWidth: 500
+				            },
+				            chartOptions: {
+				                legend: {
+				                    layout: 'horizontal',
+				                    align: 'center',
+				                    verticalAlign: 'bottom'
+				                }
+				            }
+				        }]
+				    }
+
+				});
+        </script>
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+        <script type="text/javascript">
+        	function AddDataChart(chart_id, data) {
+        		var chart = eval("chart_" + chart_id)
+
+        		var testSerie = false;
+        		var id_serie = "";
+
+        		for (var x=0; x <= chart.series.length -1; x++) {
+        			if (data["serie"] == chart.series[x].name) {
+        				console.log("found!");
+        				console.log(data["serie"]);
+        				console.log(chart.series[x].name)
+        				testSerie = true;
+        				id_serie = x;
+        				break;
+        			}
+        		}
+
+        		if (!testSerie) {
+        			chart.addSeries({
+        				name: data["serie"],
+        				id: data["serie"],
+        				data: [data["data"]]
+        			}, true);
+        		} else {
+        			chart.series[id_serie].addPoint(data["data"]);
+        		}
+        	}
+        </script>
+    </body>
+</html>
