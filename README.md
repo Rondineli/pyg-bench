@@ -36,4 +36,7 @@ pyg-bench --config-file config.ini --title "testing env" --threads 4 --interval 
 ```
 pyg-bench --config-file config.ini --title "testing env" --threads 4 --interval 900 --slave --send-tasks
 ```
-
+## Then access your dashboard to see live the execution
+```
+http://localhost:9111
+```
