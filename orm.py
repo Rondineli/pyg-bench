@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine
+from sqlalchemy.exc import InternalError
 from prettytable import PrettyTable
 from render import RenderTemplates
 from redis_queue import RedisQueue
@@ -96,8 +97,16 @@ class MyTaskSet(CountResults):
             self.queue_tasks.put("heartbeat")
 
     def vacuum(self):
-        self.db.execute("vacuum analyze films;")
-        self.db.execute("vacuum films;")
+        try:
+            self.db.execute("vacuum analyze films;")
+            self.db.execute("vacuum films;")
+
+        except InternalError:
+            from table import Films
+            films = Films()
+            films.metadata.create_all(bind=self.db)
+            
+ 
 
     def run(self):
         while self.running and self.queue_tasks.get():
