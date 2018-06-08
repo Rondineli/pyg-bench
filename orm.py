@@ -105,64 +105,60 @@ class MyTaskSet(CountResults):
             from table import Films
             films = Films()
             films.metadata.create_all(bind=self.db)
-            
- 
-
-    def run(self):
-        while self.running and self.queue_tasks.get():
-            self.write()
-            self.read()
+        return
 
     def read(self):
-        ts = datetime.datetime.now()
-        self.db.execute("SELECT * FROM films;".format(
-            str(uuid.uuid4())[-5:], random.randint(0, self.LIMIT * 100))
-        )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "select",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
-        )
+        while self.running and self.queue_tasks.get():
+            ts = datetime.datetime.now()
+            self.db.execute("SELECT * FROM films;".format(
+                str(uuid.uuid4())[-5:], random.randint(0, self.LIMIT * 100))
+            )
+            te = datetime.datetime.now()
+            ms = ts - te
+            self.queue_data.put(
+                {
+                    "type": "select",
+                    "total_seconds": round(ms.total_seconds() * -1, 5)
+                }
+            )
 
     def write(self):
-        # INSERTS
-        code = str(uuid.uuid4())[-5:]
-        ts = datetime.datetime.now()
-        self.db.execute(
-            "INSERT into films (code, title, did, kind) VALUES('{}', 'test', {}, 't');".format( # noqa
-                code,
-                random.randint(0, self.LIMIT * 100)
+        while self.running and self.queue_tasks.get():
+            # INSERTS
+            code = str(uuid.uuid4())[-5:]
+            ts = datetime.datetime.now()
+            self.db.execute(
+                "INSERT into films (code, title, did, kind) VALUES('{}', 'test', {}, 't');".format( # noqa
+                    code,
+                    random.randint(0, self.LIMIT * 100)
+                )
             )
-        )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "insert",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
-        )
+            te = datetime.datetime.now()
+            ms = ts - te
+            self.queue_data.put(
+                {
+                    "type": "insert",
+                    "total_seconds": round(ms.total_seconds() * -1, 5)
+                }
+            )
 
-        # UPDATES
-        new_code = str(uuid.uuid4())[-5:]
-        ts = datetime.datetime.now()
-        self.db.execute(
-            "UPDATE films set code='{}' where code='{}';".format(
-                new_code,
-                code
+            # UPDATES
+            new_code = str(uuid.uuid4())[-5:]
+            ts = datetime.datetime.now()
+            self.db.execute(
+                "UPDATE films set code='{}' where code='{}';".format(
+                    new_code,
+                    code
+                )
             )
-        )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "update",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
-        )
+            te = datetime.datetime.now()
+            ms = ts - te
+            self.queue_data.put(
+                {
+                    "type": "update",
+                    "total_seconds": round(ms.total_seconds() * -1, 5)
+                }
+            )
 
     def on_finish(self):
         self.running = False
@@ -352,23 +348,26 @@ def main():
 
     if args.send_tasks:
         for item in range(0, int(args.threads)):
-            t = threading.Thread(target=real_time.set_tasks)
-            t.daemon = True
-            t.start()
+            tasks = threading.Thread(target=real_time.set_tasks)
+            tasks.daemon = True
+            tasks.start()
 
     if not args.slave:
-        p = threading.Thread(target=real_time.do_run)
-        p.daemon = True
-        p.start()
+        run = threading.Thread(target=real_time.do_run)
+        run.daemon = True
+        run.start()
 
-        a = threading.Thread(target=real_time.do_count)
-        a.daemon = True
-        a.start()
+        count = threading.Thread(target=real_time.do_count)
+        count.daemon = True
+        count.start()
 
     for item in range(0, int(args.threads)):
-        p = threading.Thread(target=real_time.run)
-        p.daemon = True
-        p.start()
+        read = threading.Thread(target=real_time.read)
+        write = threading.Thread(target=real_time.write)
+        read.daemon = True
+        write.daemon = True
+        read.start()
+        write.start()
 
     try:
         time.sleep(int(args.interval))
