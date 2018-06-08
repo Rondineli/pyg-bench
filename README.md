@@ -2,6 +2,7 @@
 Install redis see: https://redis.io/topics/quickstart
 
 ```
+sudo apt-get install libpq-dev python-dev
 python3 setup.py install
 ```
 # Options of the project

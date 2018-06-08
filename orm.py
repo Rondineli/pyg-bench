@@ -244,7 +244,10 @@ class MyTaskSet(CountResults):
             ])
 
             print(table)
-            time.sleep(5)
+
+        while self.queue_data.qsize() > 0 or self.queue_chart.qsize() > 0:
+            print("Waiting finishing all pendents query")
+            time.sleep(1)
 
         self.purge_queues()
 
