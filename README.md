@@ -1,4 +1,6 @@
 # How to install the project:
+Install redis see: https://redis.io/topics/quickstart
+
 ```
 python3 setup.py install
 ```
