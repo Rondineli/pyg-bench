@@ -136,11 +136,14 @@
         		var testSerie = false;
         		var id_serie = "";
 
+        		var chart_color = {
+        			"select": "bule",
+        			"insert": "green",
+        			"update": "black"
+        		}
+
         		for (var x=0; x <= chart.series.length -1; x++) {
         			if (data["serie"] == chart.series[x].name) {
-        				console.log("found!");
-        				console.log(data["serie"]);
-        				console.log(chart.series[x].name)
         				testSerie = true;
         				id_serie = x;
         				break;
@@ -151,7 +154,8 @@
         			chart.addSeries({
         				name: data["serie"],
         				id: data["serie"],
-        				data: [data["data"]]
+        				data: [data["data"]],
+        				color: chart_color["serie"]
         			}, true);
         		} else {
         			chart.series[id_serie].addPoint(data["data"]);

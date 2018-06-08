@@ -174,7 +174,12 @@ class MyTaskSet(CountResults):
             time.sleep(1)
 
         if not self.slave:
-
+            self.chart.update_chart(
+                self.queue_chart,
+                2,
+                "select",
+                data=self.RESPONSE_TIME_AVERAGE["average_select"]
+            )
             self.chart.update_chart(
                 self.queue_chart,
                 2,
@@ -189,9 +194,9 @@ class MyTaskSet(CountResults):
             )
             self.chart.update_chart(
                 self.queue_chart,
-                2,
+                3,
                 "select",
-                data=self.RESPONSE_TIME_AVERAGE["average_select"]
+                data=self.SELECTS_COUNT
             )
             self.chart.update_chart(
                 self.queue_chart,
@@ -205,12 +210,7 @@ class MyTaskSet(CountResults):
                 "insert",
                 data=self.INSERTS_COUNT
             )
-            self.chart.update_chart(
-                self.queue_chart,
-                3,
-                "select",
-                data=self.SELECTS_COUNT
-            )
+
             table = PrettyTable([
                 "Item",
                 "Total",
