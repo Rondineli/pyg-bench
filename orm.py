@@ -286,7 +286,7 @@ class RealTimeChart(MyTaskSet):
             time.sleep(20)
 
 
-if __name__ == "__main__":
+def main():
 
     description = 'Tests suites for postgresql'
     parser = argparse.ArgumentParser(description=description)
