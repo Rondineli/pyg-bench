@@ -158,7 +158,11 @@
         				color: chart_color["serie"]
         			}, true);
         		} else {
-        			chart.series[id_serie].addPoint(data["data"]);
+        			if (chart_id == 1) {
+        				chart.series[id_serie].addPoint(data["data"]);
+        			} else {
+        				chart.series[id_serie].setData([data["data"]], true);
+        			}
         		}
         	}
         </script>

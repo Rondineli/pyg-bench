@@ -10,16 +10,10 @@ class NotfoundExcpetion(Exception):
 
 class CountResults(object):
     def __init__(self, time_execution_in_sec, chart_title,
-                 slave, config, *args, **kwargs):
-        redis_kwargs = {
-            "host": config["redis"]["redis_host"],
-            "port": config["redis"]["redis_port"],
-            "db": config["redis"]["redis_db"]
-        }
+                 slave, *args, **kwargs):
         self.queue_data = RedisQueue(
             name="data_count",
-            namespace="data_count",
-            **redis_kwargs
+            namespace="data_count"
         )
         self.LIMIT = 1000
         self.TIMING = time_execution_in_sec

@@ -4,7 +4,9 @@ from prettytable import PrettyTable
 from render import RenderTemplates
 from redis_queue import RedisQueue
 from count import CountResults
+from config import config
 
+import profiling # noqa
 import os
 import time
 import random
@@ -12,12 +14,11 @@ import uuid
 import datetime
 import argparse
 import threading
-import configparser
 
 
 class ReportCharts(object):
 
-    def __init__(self, time_execution_in_sec, title, config, slave=False):
+    def __init__(self, time_execution_in_sec, title, slave=False):
 
         t = RenderTemplates()
         data = {
@@ -36,7 +37,6 @@ class ReportCharts(object):
                 target=t.start_report,
                 args=(
                     data,
-                    config,
                     file_chart_temp
                 )
             )
@@ -58,35 +58,28 @@ class ReportCharts(object):
 class MyTaskSet(CountResults):
 
     def __init__(self, time_execution_in_sec, chart_title,
-                 slave, config, *args, **kwargs):
+                 slave, *args, **kwargs):
         self.running = True
         self.slave = slave
         self.code = None
 
-        redis_kwargs = {
-            "host": config["redis"]["redis_host"],
-            "port": config["redis"]["redis_port"],
-            "db": config["redis"]["redis_db"]
-        }
         self.queue_chart = RedisQueue(
             name="data_chart",
-            namespace="data_chart",
-            **redis_kwargs
+            namespace="data_chart"
         )
         self.queue_tasks = RedisQueue(
             name="data_tasks",
-            namespace="data_tasks",
-            **redis_kwargs
+            namespace="data_tasks"
         )
         self.chart = ReportCharts(
             time_execution_in_sec,
             chart_title,
-            config,
             self.slave
         )
         self.db = create_engine(config["database"]["db_string"])
+
         super(MyTaskSet, self).__init__(time_execution_in_sec, chart_title,
-                                        slave, config, *args, **kwargs)
+                                        slave, *args, **kwargs)
 
     def purge_queues(self):
         self.queue_chart.purge()
@@ -114,55 +107,26 @@ class MyTaskSet(CountResults):
             self.write()
 
     def read(self):
-        ts = datetime.datetime.now()
         self.db.execute("SELECT * FROM films;".format(
             str(uuid.uuid4())[-5:], random.randint(0, self.LIMIT * 100))
         )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "select",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
-        )
 
     def write(self):
-        
         # INSERTS
         self.code = str(uuid.uuid4())[-5:]
-        ts = datetime.datetime.now()
         self.db.execute(
             "INSERT into films (code, title, did, kind) VALUES('{}', 'test', {}, 't');".format( # noqa
                 self.code,
                 random.randint(0, self.LIMIT * 100)
             )
         )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "insert",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
-        )
-
         # UPDATES
         new_code = str(uuid.uuid4())[-5:]
-        ts = datetime.datetime.now()
         self.db.execute(
             "UPDATE films set code='{}' where code='{}';".format(
                 new_code,
                 self.code
             )
-        )
-        te = datetime.datetime.now()
-        ms = ts - te
-        self.queue_data.put(
-            {
-                "type": "update",
-                "total_seconds": round(ms.total_seconds() * -1, 5)
-            }
         )
 
     def on_finish(self):
@@ -175,43 +139,6 @@ class MyTaskSet(CountResults):
             time.sleep(1)
 
         if not self.slave:
-            self.chart.update_chart(
-                self.queue_chart,
-                2,
-                "select",
-                data=self.RESPONSE_TIME_AVERAGE["average_select"]
-            )
-            self.chart.update_chart(
-                self.queue_chart,
-                2,
-                "update",
-                data=self.RESPONSE_TIME_AVERAGE["average_update"]
-            )
-            self.chart.update_chart(
-                self.queue_chart,
-                2,
-                "insert",
-                data=self.RESPONSE_TIME_AVERAGE["average_insert"]
-            )
-            self.chart.update_chart(
-                self.queue_chart,
-                3,
-                "select",
-                data=self.SELECTS_COUNT
-            )
-            self.chart.update_chart(
-                self.queue_chart,
-                3,
-                "update",
-                data=self.UPDATES_COUNT
-            )
-            self.chart.update_chart(
-                self.queue_chart,
-                3,
-                "insert",
-                data=self.INSERTS_COUNT
-            )
-
             table = PrettyTable([
                 "Item",
                 "Total",
@@ -262,19 +189,60 @@ class MyTaskSet(CountResults):
 
 class RealTimeChart(MyTaskSet):
     def __init__(self, time_execution_in_sec, chart_title,
-                 slave, config, *args, **kwargs):
+                 slave, *args, **kwargs):
         super(RealTimeChart, self).__init__(time_execution_in_sec, chart_title,
-                                            slave, config, *args, **kwargs)
+                                            slave, *args, **kwargs)
 
     def do_run(self):
         while self.running:
             ts = datetime.datetime.now()
+
+
+            self.chart.update_chart(
+                self.queue_chart,
+                2,
+                "select",
+                data=self.RESPONSE_TIME_AVERAGE["average_select"]
+            )
+            self.chart.update_chart(
+                self.queue_chart,
+                2,
+                "update",
+                data=self.RESPONSE_TIME_AVERAGE["average_update"]
+            )
+            self.chart.update_chart(
+                self.queue_chart,
+                2,
+                "insert",
+                data=self.RESPONSE_TIME_AVERAGE["average_insert"]
+            )
+            self.chart.update_chart(
+                self.queue_chart,
+                3,
+                "select",
+                data=self.SELECTS_COUNT
+            )
+            self.chart.update_chart(
+                self.queue_chart,
+                3,
+                "update",
+                data=self.UPDATES_COUNT
+            )
+            self.chart.update_chart(
+                self.queue_chart,
+                3,
+                "insert",
+                data=self.INSERTS_COUNT
+            )
+
+            tstamp = float(ts.timestamp()) * 1000.0
+
             self.chart.update_chart(
                 self.queue_chart,
                 1,
                 "select",
                 data={
-                    "x": float(ts.timestamp()) * 1000.0,
+                    "x": tstamp,
                     "y": self.RESPONSE_TIME_AVERAGE["average_select"]
                 }
             )
@@ -283,7 +251,7 @@ class RealTimeChart(MyTaskSet):
                 1,
                 "update",
                 data={
-                    "x": float(ts.timestamp()) * 1000.0,
+                    "x": tstamp,
                     "y": self.RESPONSE_TIME_AVERAGE["average_update"]
                 }
             )
@@ -292,7 +260,7 @@ class RealTimeChart(MyTaskSet):
                 1,
                 "insert",
                 data={
-                    "x": float(ts.timestamp()) * 1000.0,
+                    "x": tstamp,
                     "y": self.RESPONSE_TIME_AVERAGE["average_insert"]
                 }
             )
@@ -303,10 +271,6 @@ def main():
 
     description = 'Tests suites for postgresql'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument(
-        '--config-file', help='config file path',
-        required=True
-    )
     parser.add_argument(
         '--slave',
         help='Set type of tasks executions',
@@ -342,14 +306,10 @@ def main():
 
     args, extra_params = parser.parse_known_args()
 
-    config = configparser.ConfigParser()
-    config.read(args.config_file)
-
     real_time = RealTimeChart(
         int(args.interval),
         args.title,
-        args.slave,
-        config
+        args.slave
     )
     real_time.purge_queues()
     real_time.vacuum()

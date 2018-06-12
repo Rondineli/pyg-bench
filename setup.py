@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='pyg-bench',
-    version='0.1.0',
+    version='0.1.1',
     description='Simple script to stress postgresql',
     long_description='This script is mainly to test database read/write',
     packages=[

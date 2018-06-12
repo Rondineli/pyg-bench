@@ -72,10 +72,9 @@ class RenderTemplates(object):
             loader=jinja2.FileSystemLoader(self.template_path)
         ).get_template(self.template).render(data)
 
-    def start_report(self, data, config, template=None):
+    def start_report(self, data, template=None):
         if template is not None:
             self.singleton.template_path = template
-        self.singleton.config = config
         server_address = ('', self.port)
         webd = HTTPServer(server_address, WebServerClass)
         return webd.serve_forever()
