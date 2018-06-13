@@ -43,3 +43,5 @@ pyg-bench --config-file config.ini --title "testing env" --threads 4 --interval 
 ```
 http://localhost:9111
 ```
+See 
+![Pic 1 – Dashboard view](img/dashboard.png?raw=true "Pic 1")
