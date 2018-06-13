@@ -104,7 +104,14 @@ class MyTaskSet(CountResults):
             films.metadata.create_all(bind=self.db)
         return
 
-    def run(self):
+    def run(self, thread=0):
+
+        self.chart.update_chart(
+            self.queue_chart,
+            5,
+            "thread",
+            data=1
+        )
         while self.running and self.queue_tasks.get():
             try:
                 self.read()
@@ -116,7 +123,6 @@ class MyTaskSet(CountResults):
         self.db.execute("SELECT * FROM films;".format(
             str(uuid.uuid4())[-5:], random.randint(0, self.LIMIT * 100))
         )
-
 
     def write(self):
         # INSERTS
@@ -329,7 +335,6 @@ def main():
 
     os.environ["SETTINGS_FILE"] = args.config
 
-
     real_time = RealTimeChart(
         int(args.interval),
         args.title,
@@ -354,7 +359,7 @@ def main():
         count.start()
 
     for item in range(0, int(args.threads)):
-        run = threading.Thread(target=real_time.run)
+        run = threading.Thread(target=real_time.run, args=(item,))
         run.daemon = True
         run.start()
 

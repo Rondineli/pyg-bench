@@ -4,15 +4,17 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
         <title>Test Results</title>
         <script src="//code.highcharts.com/highcharts.js"></script>
-		<script src="//code.highcharts.com/modules/series-label.js"></script>
-		<script src="//code.highcharts.com/modules/exporting.js"></script>
-		<script src="//code.highcharts.com/modules/export-data.js"></script>
-		<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/css/materialize.min.css">
-		<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-		<script src="//cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
-		<script>
-		window.jQuery || document.write('<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"><\/script>;')
-		</script>
+        <script src="//code.highcharts.com/highcharts-more.js"></script>
+				<script src="//code.highcharts.com/modules/series-label.js"></script>
+				<script src="//code.highcharts.com/modules/exporting.js"></script>
+				<script src="//code.highcharts.com/modules/export-data.js"></script>
+				<script src="//code.highcharts.com/modules/solid-gauge.js"></script>
+				<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/css/materialize.min.css">
+				<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+				<script src="//cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-beta/js/materialize.min.js"></script>
+				<script>
+					window.jQuery || document.write('<script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"><\/script>;')
+				</script>
 
     </head>
     <body>
@@ -27,11 +29,14 @@
 						  </div>
 						</div>
 						<div class="row">
-						 	<div class="col s6">
+						 	<div class="col s4">
 			      		<div id="container2"></div>
 			      	</div>
-			      	<div class="col s6">
+			      	<div class="col s4">
 			      		<div id="container3"></div>
+			      	</div>
+			      	<div class="col s4">
+			      		<div id="container5"></div>
 			      	</div>
 			      </div>
         	</div>
@@ -160,6 +165,88 @@
 				    },
  						series: []
    				});
+
+   				var gaugeOptions = {
+				    chart: {
+				        type: 'solidgauge'
+				    },
+
+				    title: null,
+
+				    pane: {
+				        center: ['50%', '85%'],
+				        size: '140%',
+				        startAngle: -90,
+				        endAngle: 90,
+				        background: {
+				            backgroundColor: (Highcharts.theme && Highcharts.theme.background2) || '#EEE',
+				            innerRadius: '60%',
+				            outerRadius: '100%',
+				            shape: 'arc'
+				        }
+				    },
+
+				    tooltip: {
+				        enabled: false
+				    },
+
+				    // the value axis
+				    yAxis: {
+				        stops: [
+				            [0.1, '#55BF3B'], // green
+				            [0.5, '#DDDF0D'], // yellow
+				            [0.9, '#DF5353'] // red
+				        ],
+				        lineWidth: 0,
+				        minorTickInterval: null,
+				        tickAmount: 2,
+				        title: {
+				            y: -70
+				        },
+				        labels: {
+				            y: 0
+				        }
+				    },
+
+				    plotOptions: {
+				        solidgauge: {
+				            dataLabels: {
+				                y: 0,
+				                borderWidth: 0,
+				                useHTML: true
+				            }
+				        }
+				    }
+				};
+
+				// The speed gauge
+				var chart_5 = Highcharts.chart('container5', Highcharts.merge(gaugeOptions, {
+			    yAxis: {
+			        min: 0,
+			        max: 200,
+			        title: {
+			            text: 'Threads spwaned'
+			        }
+			    },
+
+			    credits: {
+			        enabled: false
+			    },
+
+			    series: [{
+			        name: 'Paralalel execution',
+			        data: [1],
+			        dataLabels: {
+			            format: '<div style="text-align:center"><span style="font-size:25px;color:' +
+			                ((Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black') + '">{y}</span><br/>' +
+			                   '<span style="font-size:12px;color:silver">threads</span></div>'
+			        },
+			        tooltip: {
+			            valueSuffix: ' Threads/executions'
+			        }
+			    }]
+
+				}));
         </script>
         <script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
         <script type="text/javascript">
@@ -194,6 +281,21 @@
         		} else {
         			if (chart_id == 1) {
         				chart.series[id_serie].addPoint(data["data"]);
+        			} else if (chart_id == 5) {
+
+						    var point,
+						        newVal,
+						        inc;
+
+				        point = chart_5.series[0].points[0];
+				        inc = data["data"];
+				        newVal = point.y + inc;
+
+				        if (newVal < 0 || newVal > 200) {
+				            newVal = point.y - inc;
+				        }
+
+				        point.update(newVal);
         			} else {
         				chart.series[id_serie].setData([data["data"]], true);
         			}
