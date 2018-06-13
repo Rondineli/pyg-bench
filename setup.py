@@ -7,10 +7,10 @@ setup(
     description='Simple script to stress postgresql',
     long_description='This script is mainly to test database read/write',
     packages=[
-        '.', 'templates'
+        'pyg_bench', 'pyg_bench.templates'
         ],
     package_data={
-        'templates': ['*']
+        'pyg_bench.templates': ['*']
     },
     url='https://github.com/Rondineli/pyg-bench',
     author='Rondineli Gomes de Araujo',
@@ -33,7 +33,7 @@ setup(
     keywords='scripts postgres database',
     entry_points={
        "console_scripts": [
-           "pyg-bench = orm:main",
+           "pyg-bench = pyg_bench.orm:main",
        ]
     }
 )

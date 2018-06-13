@@ -4,7 +4,7 @@ from prettytable import PrettyTable
 from render import RenderTemplates
 from redis_queue import RedisQueue
 from count import CountResults
-from config import config
+from config import Config
 
 import profiling # noqa
 import os
@@ -19,22 +19,27 @@ import threading
 class ReportCharts(object):
 
     def __init__(self, time_execution_in_sec, title, slave=False):
+        self.config = Config().get_config()
 
-        t = RenderTemplates()
+        render = RenderTemplates(
+            listen=self.config["webserver"]["listen"],
+            template=self.config["webserver"].get("template"),
+            port=self.config["webserver"]["port"]
+        )
         data = {
             "time_execution_in_sec": time_execution_in_sec,
             "title": title
         }
 
         if not slave:
-            output = t.render(data=data)
+            output = render.render(data=data)
             nuuid = str(uuid.uuid4())
             file_chart_temp = "/tmp/{}.html".format(nuuid)
             new_html_template = open(file_chart_temp, "w")
             new_html_template.write(output)
             new_html_template.close()
             thr = threading.Thread(
-                target=t.start_report,
+                target=render.start_report,
                 args=(
                     data,
                     file_chart_temp
@@ -45,20 +50,21 @@ class ReportCharts(object):
 
     def update_chart(self, queue, chart_id, serie, data):
 
-        data = {
+        queue.put({
             "chart_id": chart_id,
             "data": {
                 "serie": serie,
                 "data": data
             }
-        }
-        queue.put(data)
+        })
 
 
 class MyTaskSet(CountResults):
 
     def __init__(self, time_execution_in_sec, chart_title,
                  slave, *args, **kwargs):
+        super(MyTaskSet, self).__init__(time_execution_in_sec, chart_title,
+                                        slave, *args, **kwargs)
         self.running = True
         self.slave = slave
         self.code = None
@@ -76,10 +82,7 @@ class MyTaskSet(CountResults):
             chart_title,
             self.slave
         )
-        self.db = create_engine(config["database"]["db_string"])
-
-        super(MyTaskSet, self).__init__(time_execution_in_sec, chart_title,
-                                        slave, *args, **kwargs)
+        self.db = create_engine(self.config["database"]["db_string"])
 
     def purge_queues(self):
         self.queue_chart.purge()
@@ -103,13 +106,17 @@ class MyTaskSet(CountResults):
 
     def run(self):
         while self.running and self.queue_tasks.get():
-            self.read()
-            self.write()
+            try:
+                self.read()
+                self.write()
+            except Exception as e:
+                self.RESPONSE_TIME_AVERAGE["errors"] += 1
 
     def read(self):
         self.db.execute("SELECT * FROM films;".format(
             str(uuid.uuid4())[-5:], random.randint(0, self.LIMIT * 100))
         )
+
 
     def write(self):
         # INSERTS
@@ -143,27 +150,30 @@ class MyTaskSet(CountResults):
                 "Item",
                 "Total",
                 "Average Execution (sec)",
+                "Total Errors",
                 "Total Executed (sec)"
             ])
 
             table.add_row([
                 "INSERTS",
-                self.INSERTS_COUNT,
-                self.RESPONSE_TIME_AVERAGE["average_insert"],
+                self.RESPONSE_TIME_AVERAGE["count"]["insert"],
+                self.RESPONSE_TIME_AVERAGE["average"]["insert"],
+                "",
                 ""
-
             ])
             table.add_row([
                 "UPDATES",
-                self.UPDATES_COUNT,
-                self.RESPONSE_TIME_AVERAGE["average_update"],
+                self.RESPONSE_TIME_AVERAGE["count"]["update"],
+                self.RESPONSE_TIME_AVERAGE["average"]["update"],
+                "",
                 ""
 
             ])
             table.add_row([
                 "SELECTS",
-                self.SELECTS_COUNT,
-                self.RESPONSE_TIME_AVERAGE["average_select"],
+                self.RESPONSE_TIME_AVERAGE["count"]["select"],
+                self.RESPONSE_TIME_AVERAGE["average"]["select"],
+                "",
                 ""
 
             ])
@@ -171,8 +181,8 @@ class MyTaskSet(CountResults):
                 "",
                 "",
                 "",
+                self.RESPONSE_TIME_AVERAGE["errors"],
                 "Finished execution after {} seconds".format(self.TIMING)
-
             ])
 
             print(table)
@@ -197,42 +207,47 @@ class RealTimeChart(MyTaskSet):
         while self.running:
             ts = datetime.datetime.now()
 
-
+            self.chart.update_chart(
+                self.queue_chart,
+                4,
+                "error",
+                data=self.RESPONSE_TIME_AVERAGE["errors"]
+            )
             self.chart.update_chart(
                 self.queue_chart,
                 2,
                 "select",
-                data=self.RESPONSE_TIME_AVERAGE["average_select"]
+                data=self.RESPONSE_TIME_AVERAGE["average"]["select"]
             )
             self.chart.update_chart(
                 self.queue_chart,
                 2,
                 "update",
-                data=self.RESPONSE_TIME_AVERAGE["average_update"]
+                data=self.RESPONSE_TIME_AVERAGE["average"]["update"]
             )
             self.chart.update_chart(
                 self.queue_chart,
                 2,
                 "insert",
-                data=self.RESPONSE_TIME_AVERAGE["average_insert"]
+                data=self.RESPONSE_TIME_AVERAGE["average"]["insert"]
             )
             self.chart.update_chart(
                 self.queue_chart,
                 3,
                 "select",
-                data=self.SELECTS_COUNT
+                data=self.RESPONSE_TIME_AVERAGE["count"]["select"]
             )
             self.chart.update_chart(
                 self.queue_chart,
                 3,
                 "update",
-                data=self.UPDATES_COUNT
+                data=self.RESPONSE_TIME_AVERAGE["count"]["update"]
             )
             self.chart.update_chart(
                 self.queue_chart,
                 3,
                 "insert",
-                data=self.INSERTS_COUNT
+                data=self.RESPONSE_TIME_AVERAGE["count"]["insert"]
             )
 
             tstamp = float(ts.timestamp()) * 1000.0
@@ -243,7 +258,7 @@ class RealTimeChart(MyTaskSet):
                 "select",
                 data={
                     "x": tstamp,
-                    "y": self.RESPONSE_TIME_AVERAGE["average_select"]
+                    "y": self.RESPONSE_TIME_AVERAGE["average"]["select"]
                 }
             )
             self.chart.update_chart(
@@ -252,7 +267,7 @@ class RealTimeChart(MyTaskSet):
                 "update",
                 data={
                     "x": tstamp,
-                    "y": self.RESPONSE_TIME_AVERAGE["average_update"]
+                    "y": self.RESPONSE_TIME_AVERAGE["average"]["update"]
                 }
             )
             self.chart.update_chart(
@@ -261,7 +276,7 @@ class RealTimeChart(MyTaskSet):
                 "insert",
                 data={
                     "x": tstamp,
-                    "y": self.RESPONSE_TIME_AVERAGE["average_insert"]
+                    "y": self.RESPONSE_TIME_AVERAGE["average"]["insert"]
                 }
             )
             time.sleep(20)
@@ -304,7 +319,16 @@ def main():
         required=True
     )
 
+    parser.add_argument(
+        '--config',
+        help='*.ini config file',
+        required=True
+    )
+
     args, extra_params = parser.parse_known_args()
+
+    os.environ["SETTINGS_FILE"] = args.config
+
 
     real_time = RealTimeChart(
         int(args.interval),

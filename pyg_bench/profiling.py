@@ -19,6 +19,7 @@ def before_cursor_execute(conn, cursor, statement,
 @event.listens_for(Engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement,
                          parameters, context, executemany):
+
     type_statement = ""
 
     if "SELECT" in statement.upper():

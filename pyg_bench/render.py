@@ -60,9 +60,10 @@ class WebServerClass(BaseHTTPRequestHandler):
 
 
 class RenderTemplates(object):
-    def __init__(self, template=None, port=9111):
+    def __init__(self, listen="0.0.0.0", template=None, port=9111):
         self.singleton = Singleton()
-        self.port = port
+        self.port = int(port)
+        self.listen = listen
         if template is None:
             self.template_path = os.path.join(BASE_PATH, './templates/')
             self.template = "chart_report.html"
@@ -75,6 +76,6 @@ class RenderTemplates(object):
     def start_report(self, data, template=None):
         if template is not None:
             self.singleton.template_path = template
-        server_address = ('', self.port)
+        server_address = (self.listen, self.port)
         webd = HTTPServer(server_address, WebServerClass)
         return webd.serve_forever()

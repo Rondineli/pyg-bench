@@ -1,4 +1,4 @@
-from config import config
+from config import Config
 import redis
 
 
@@ -12,10 +12,12 @@ class RedisQueue(object):
         port=6379,
         db=0
         """
+        self.config = Config().get_config()
+
         redis_kwargs = {
-            "host": config["redis"]["redis_host"],
-            "port": config["redis"]["redis_port"],
-            "db": config["redis"]["redis_db"]
+            "host": self.config["redis"]["redis_host"],
+            "port": self.config["redis"]["redis_port"],
+            "db": self.config["redis"]["redis_db"]
         }
 
         self.__db = redis.Redis(**redis_kwargs)
